@@ -28,6 +28,4 @@ def on_message(client, userdata, msg):
             check(client, device, response_topic)
         elif msg.topic == control_topic:
             control(device, payload, device_id)
-        else:
-            print(f"Received message on unknown topic: {msg.topic}")
                 

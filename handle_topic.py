@@ -1,3 +1,4 @@
+from device_controller import *
 import json
 
 def check(client, device, response_topic):
@@ -9,16 +10,16 @@ def check(client, device, response_topic):
     print("Response sent on", response_topic)
     
 
-
 def control(device, payload, device_id):
-    message = json.loads(payload)
-    action = message.get("action")
+    try:
+        message = json.loads(payload)
+        device_value = message.get("device_value")
 
-    if action == "turn_on":
-        device.turn_on()
-        print(f"Turned on {device_id}")
-    elif action == "turn_off":
-        device.turn_off()
-        print(f"Turned off {device_id}")
-    else:
-        print(f"Unknown action: {action}")
+        if isinstance(device, LED):
+            device.set_brightness(device_value)
+        else:
+            print(f"Device {device_id} is not an LED")
+            
+    except Exception as e:
+        print(f"Error: {str(e)}")
+        pass

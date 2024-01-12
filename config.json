@@ -3,6 +3,6 @@
     "CTN_DID": "C001",
     "LED_PIN": 17,
     "CTN_PIN": 18,
-    "MQTT_BROKER": "192.168.203.116",
+    "MQTT_BROKER": "192.168.203.118",
     "MQTT_PORT": 1883
 }

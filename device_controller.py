@@ -37,6 +37,7 @@ class LED(Device):  # Device 클래스 상속
     def set_brightness(self, brightness):
         if 0 <= brightness <= 100:
             self.pwm.ChangeDutyCycle(brightness)  # 밝기 조절
+            print(f"Set brightness of {self.did} to {brightness}%")
         else:
             print("Invalid brightness: Enter a value between 0 and 100")
     
