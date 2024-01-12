@@ -1,17 +1,16 @@
 import paho.mqtt.client as mqtt
-from control_device import * 
+from device_controller import * 
 from mqtt_methods import *
+from config_loader import load_config
 
-LED_DID = "L001"
-CTN_DID = "C001"
+config = load_config()
 
-LED_PIN = 17 
-CTN_PIN = 18
-
-# MQTT 브로커 설정
-MQTT_BROKER = "192.168.203.116" # 근찬 IP
-# MQTT_BROKER = "192.168.203.118" # 내 맥북IP
-MQTT_PORT = 1883
+LED_DID = config["LED_DID"]
+CTN_DID = config["CTN_DID"]
+LED_PIN = config["LED_PIN"]
+CTN_PIN = config["CTN_PIN"]
+MQTT_BROKER = config["MQTT_BROKER"]
+MQTT_PORT = config["MQTT_PORT"]
 
 if __name__ == '__main__':
     
