@@ -1,5 +1,5 @@
 import paho.mqtt.client as mqtt
-from control_device import * 
+from device_controller import * 
 from mqtt_methods import *
 from config_loader import load_config
 
