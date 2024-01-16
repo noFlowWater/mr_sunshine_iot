@@ -1,7 +1,7 @@
 import paho.mqtt.client as mqtt
 from device_controller import * 
 from mqtt_methods import *
-from utils import load_config, start_pigpiod, stop_pigpiod
+from utils import *
 
 config = load_config()
 
@@ -33,7 +33,7 @@ if __name__ == '__main__':
         client.on_message = on_message
 
         # MQTT 서버에 연결
-        client.connect(MQTT_BROKER, MQTT_PORT, 60)
+        client.connect(host=MQTT_BROKER,port=MQTT_PORT)
         
         client.loop_forever()
 

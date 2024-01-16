@@ -26,6 +26,8 @@ def on_message(client, userdata, msg):
 
         if msg.topic == check_topic:
             check(client, device, response_topic)
+            return
         elif msg.topic == control_topic:
             control(device, payload, device_id)
+            return
                 
