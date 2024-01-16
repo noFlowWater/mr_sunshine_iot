@@ -17,8 +17,10 @@ def control(device, payload, device_id):
 
         if isinstance(device, LED):
             device.set_brightness(device_value)
+        elif isinstance(device, CTN):
+            device.setServoPos(device_value)
         else:
-            print(f"Device {device_id} is not an LED")
+            print(f"Device {device_id} is not valid")
             
     except Exception as e:
         print(f"Error: {str(e)}")
