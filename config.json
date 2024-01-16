@@ -1,8 +1,8 @@
 {
-    "LED_DID": "L001",
-    "CTN_DID": "C001",
-    "LED_PIN": 17,
-    "CTN_PIN": 18,
     "MQTT_BROKER": "192.168.203.118",
-    "MQTT_PORT": 1883
+    "MQTT_PORT": 1883,
+    "LED_DID_1": "L001",
+    "LED_PIN_1": 17,
+    "CTN_DID_1": "C001",
+    "CTN_PIN_1": 18
 }

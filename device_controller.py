@@ -1,5 +1,5 @@
 import RPi.GPIO as GPIO
-import time
+import pigpio
 
 class Device:  # 부모 클래스 정의
     def __init__(self, did, pin):
@@ -44,31 +44,23 @@ class LED(Device):  # Device 클래스 상속
     
 class CTN(Device):  # Device 클래스 상속
     
-    def __init__(self, did, pin, freq):
+    def __init__(self, did, pin):
         super().__init__(did, pin)  # 부모 클래스의 생성자 호출
-        self.freq = freq
-        GPIO.setup(self.pin, GPIO.OUT)  
-        self.pwm = GPIO.PWM(self.pin, self.freq)
+        self.pi = pigpio.pi()
     ## 인스턴스 생성시 자동으로 핀, freq 설정
     
-    def angle_to_percent(self, angle):
-            if angle > 180 or angle < 0:
-                return False
-            start = 4
-            end = 12.5
-            ratio = (end - start) / 180
-            angle_as_percent = angle * ratio
-            return start + angle_as_percent
-    ## 회전각 계산
-    
-    def turn_on(self):
-        for angle in [0, 90, 180]:  # 0도, 90도, 180도 각도에 대해
-            self.pwm.start(self.angle_to_percent(angle))  # 해당 각도에 대한 duty cycle 설정
-            time.sleep(1)  # 1초 동안 유지
-        self.pwm.stop()  # PWM 정지
-    ## 동작
-    
+    def setServoPos(self, degree):
+        # 0~100 범위를 500~2200 범위로 변환
+        pulse_width = ((degree / 100) * 1700) + 500
+        self.pi.set_servo_pulsewidth(self.pin, pulse_width)
+        
+    def end(self):
+        self.pi.stop()
+        
 def sys_setup():
-        # GPIO 모드 설정
+    # GPIO 모드 설정
     GPIO.setmode(GPIO.BCM)
     GPIO.setwarnings(False)
+    
+def sys_end():
+    GPIO.cleanup()
