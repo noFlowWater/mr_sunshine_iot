@@ -1,5 +1,6 @@
 import RPi.GPIO as GPIO
-import pigpio
+from RpiMotorLib import RpiMotorLib
+import time
 
 class Device:  # 부모 클래스 정의
     def __init__(self, did, pin):
@@ -11,9 +12,6 @@ class Device:  # 부모 클래스 정의
 
     def get_DID(self):
         return self.did
-
-    def get_control_topic(self):
-        return f"control/{self.get_DID()}"
     
     def get_check_topic(self):
         return f"check/{self.get_DID()}"
@@ -21,41 +19,85 @@ class Device:  # 부모 클래스 정의
     def get_response_topic(self):
         return f"response/{self.get_DID()}"
 
-class LED(Device):  # Device 클래스 상속
+    def get_control_topic(self):
+        return f"control/{self.get_DID()}"
+    
+    def get_result_topic(self):
+        return f"result/{self.get_DID()}"
+    
+    @staticmethod
+    def execute_operation(operation, *args, 
+                          success_message="Operation successful", 
+                          error_message_prefix="Error in operation"):
+        try:
+            operation(*args)
+            return "success", success_message
+        except Exception as e:
+            return "fail", f"{error_message_prefix}: {e}"
+
+class LED(Device):
     def __init__(self, did, pin):
-        super().__init__(did, pin)  # 부모 클래스의 생성자 호출
+        super().__init__(did, pin)
         GPIO.setup(self.pin, GPIO.OUT)
-        self.pwm = GPIO.PWM(self.pin, 1000)  # 1000Hz의 주파수로 PWM 설정
-        self.pwm.start(0)  # 초기 밝기를 0%로 설정
+        self.pwm = GPIO.PWM(self.pin, 1000)
+        self.pwm.start(0)
+        self.current_brightness = 0
 
-    def turn_on(self):
-        self.pwm.ChangeDutyCycle(100)  # 밝기를 100%로 설정
+    def _gradual_change(self, target_brightness, duration=1):
+        step_duration = 0.01
+        step = (target_brightness - self.current_brightness) / (duration / step_duration)
+        for _ in range(int(duration / step_duration)):
+            self.current_brightness += step
+            # 현재 밝기를 반올림하여 처리
+            adjusted_brightness = round(max(0, min(100, self.current_brightness)), 4)
+            self.pwm.ChangeDutyCycle(adjusted_brightness)
+            time.sleep(step_duration)
 
-    def turn_off(self):
-        self.pwm.ChangeDutyCycle(0)  # 밝기를 0%로 설정
+        # 현재 밝기가 매우 낮은 경우 명확하게 0으로 설정
+        if abs(self.current_brightness) < 0.0001:
+            self.current_brightness = 0
+            self.pwm.ChangeDutyCycle(0)
 
-    def set_brightness(self, brightness):
+    def set(self, brightness):
+        # brightness 값이 유효한 범위 내에 있는지 확인
         if 0 <= brightness <= 100:
-            self.pwm.ChangeDutyCycle(brightness)  # 밝기 조절
-            print(f"Set brightness of {self.did} to {brightness}%")
+            def operation():
+                self._gradual_change(brightness)
+
+            success_message = f"Set brightness of {self.did} to {brightness}%"
+            error_message_prefix = "Error changing brightness"
+            return Device.execute_operation(operation, 
+                                            success_message=success_message, 
+                                            error_message_prefix=error_message_prefix)
         else:
-            print("Invalid brightness: Enter a value between 0 and 100")
+            # brightness 값이 유효 범위를 벗어나면 실패 메시지 반환
+            return "fail", "Brightness value must be between 0 and 100"
     
     
 class CTN(Device):  # Device 클래스 상속
     
     def __init__(self, did, pin):
-        super().__init__(did, pin)  # 부모 클래스의 생성자 호출
-        self.pi = pigpio.pi()
-    ## 인스턴스 생성시 자동으로 핀, freq 설정
+        super().__init__(did, pin)  
+        self.motor = RpiMotorLib.BYJMotor(did, "28BYJ")
     
-    def setServoPos(self, degree):
-        # 0~100 범위를 500~2200 범위로 변환
-        pulse_width = ((degree / 100) * 1700) + 500
-        self.pi.set_servo_pulsewidth(self.pin, pulse_width)
-        
-    def end(self):
-        self.pi.stop()
+    def set(self, degree):
+        counterclockwise = degree < 0
+        abs_degree = abs(degree)
+        steps = int(512 / 360 * abs_degree)
+
+        def operation():
+            self.motor.motor_run(self.pin, .001, steps, not counterclockwise, False, "half", .05)
+
+        success_message = f"Motor run successful. Degree: {degree}, Steps: {steps}, Counterclockwise: {str(not counterclockwise)}"
+        error_message_prefix = "Error in running motor"
+        return Device.execute_operation(operation, 
+                                        success_message=success_message, 
+                                        error_message_prefix=error_message_prefix)
+
+    def stop(self):
+        return Device.execute_operation(self.motor.motor_stop, 
+                                        success_message="Motor stop successful.", 
+                                        error_message_prefix="Error in stopping motor")
         
 def sys_setup():
     # GPIO 모드 설정

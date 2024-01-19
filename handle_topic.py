@@ -1,27 +1,31 @@
 from device_controller import *
-import json
 
-def check(client, device, response_topic):
+
+def check(device):
     print(f"Received check message on {device.get_check_topic()}")
-    response = {
+    result = {
         "device_status": "connected"
     }
-    client.publish(response_topic, json.dumps(response))
-    print("Response sent on", response_topic)
+    return result
     
-
-def control(device, payload, device_id):
+def control(device, message):
     try:
-        message = json.loads(payload)
         device_value = message.get("device_value")
-
-        if isinstance(device, LED):
-            device.set_brightness(device_value)
-        elif isinstance(device, CTN):
-            device.setServoPos(device_value)
+        target_did = device.get_DID()
+        result = {
+            "target_device": target_did,
+            "control_value": device_value,
+            "result": "fail",
+            "message": None
+        }
+        
+        # LED와 CTN 장치에 대한 처리
+        if isinstance(device, (LED, CTN)):
+            result["result"], result["message"] = device.set(device_value)
         else:
-            print(f"Device {device_id} is not valid")
-            
+            result["message"] = f"Device {target_did} is not valid"
+
     except Exception as e:
-        print(f"Error: {str(e)}")
-        pass
+        result["message"] = str(e)
+
+    return result
