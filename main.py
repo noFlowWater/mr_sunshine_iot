@@ -10,22 +10,27 @@ MQTT_PORT = config["MQTT_PORT"]
 devices_config = config["DEVICES"]
 
 if __name__ == '__main__':
-    
     try:
         sys_setup()
         devices = {}
         
         # LED 장치 초기화
         for led_info in devices_config["LED"]:
-            devices[led_info["DID"]] = LED(led_info["DID"], led_info["PIN"])
+            devices[led_info["DID"]] = LED(led_info["DID"], 
+                                           led_info["PIN"])
 
         # CTN 장치 초기화
         for ctn_info in devices_config["CTN"]:
-            devices[ctn_info["DID"]] = CTN(ctn_info["DID"], ctn_info["PIN"])
+            devices[ctn_info["DID"]] = CTN(ctn_info["DID"], 
+                                           ctn_info["PIN"])
             
-        # SEN 장치 초기화 (예시, 실제 구현 필요)
-        # for sen_info in devices_config["SEN"]:
-        #     devices[sen_info["DID"]] = SEN(sen_info["DID"], sen_info["PIN"])
+        # SEN 장치 초기화
+        for sen_info in devices_config["SEN"]:
+            devices[sen_info["DID"]] = SEN(sen_info["DID"], 
+                                           sen_info["I2C_CH"], 
+                                           sen_info["BH1750_DEV_ADDR"], 
+                                           config["CONT_H_RES_MODE"])
+
 
         # devices 전달
         set_devices(devices)
