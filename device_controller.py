@@ -3,7 +3,7 @@ from RpiMotorLib import RpiMotorLib
 from smbus2 import SMBus
 import time
 
-class Device:  # 부모 클래스 정의
+class Device:  # Defining a Parent Class
     def __init__(self, did):
         self.did = did
 
@@ -46,18 +46,18 @@ class LED(Device):
         step = (target_brightness - self.current_brightness) / (duration / step_duration)
         for _ in range(int(duration / step_duration)):
             self.current_brightness += step
-            # 현재 밝기를 반올림하여 처리
+            # Process by rounding the current brightness
             adjusted_brightness = round(max(0, min(100, self.current_brightness)), 4)
             self.pwm.ChangeDutyCycle(adjusted_brightness)
             time.sleep(step_duration)
 
-        # 현재 밝기가 매우 낮은 경우 명확하게 0으로 설정
+        # Clearly set to 0 if the current brightness is very low
         if abs(self.current_brightness) < 0.0001:
             self.current_brightness = 0
             self.pwm.ChangeDutyCycle(0)
 
     def set(self, brightness):
-        # brightness 값이 유효한 범위 내에 있는지 확인
+        # Verify that brightness values are within a valid range
         if 0 <= brightness <= 100:
             def operation():
                 self._gradual_change(brightness)
@@ -68,12 +68,12 @@ class LED(Device):
                                             success_message=success_message, 
                                             error_message_prefix=error_message_prefix)
         else:
-            # brightness 값이 유효 범위를 벗어나면 실패 메시지 반환
+            # Returns a failure message if the brightness value is outside the valid range
             return "fail", "Brightness value must be between 0 and 100"
     
     
-class CTN(Device):  # Device 클래스 상속
-    
+class CTN(Device): # Device class inheritance
+
     def __init__(self, did, pin):
         super().__init__(did)  
         self.pin = pin
@@ -98,7 +98,7 @@ class CTN(Device):  # Device 클래스 상속
                                         success_message="Motor stop successful.", 
                                         error_message_prefix="Error in stopping motor")
         
-class SEN(Device):  # 조도 센서 클래스
+class SEN(Device):  # Light sensor class
     def __init__(self, did, i2c_ch, bh1750_dev_addr, mode):
         super().__init__(did)
         self.i2c_ch = i2c_ch
@@ -120,7 +120,7 @@ class SEN(Device):  # 조도 센서 클래스
         self.i2c.close()
         
 def sys_setup():
-    # GPIO 모드 설정
+    # Setting GPIO Mode
     GPIO.setmode(GPIO.BCM)
     GPIO.setwarnings(False)
     

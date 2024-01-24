@@ -19,7 +19,7 @@ def control(device, message):
             "message": None
         }
         
-        # LED와 CTN 장치에 대한 처리
+        # Processing of LEDs and CTN devices
         if isinstance(device, (LED, CTN)):
             result["result"], result["message"] = device.set(device_value)
         else:
