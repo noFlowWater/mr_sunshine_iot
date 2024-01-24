@@ -1,5 +1,6 @@
 from handle_topic import *
 import json
+import threading
 
 devices = None
 
@@ -14,19 +15,23 @@ def on_connect(client, userdata, flags, rc):
         client.subscribe(device.get_control_topic())
         print("Subscribed to check & control topic for device:", device_id)
         
+# 메시지 도착시마다 A 함수를 호출하는 쓰레드 시작
 def on_message(client, userdata, msg):
+    threading.Thread(target=process_mqtt_message, args=(client, msg)).start()
+    
+        
+def process_mqtt_message(client, msg):
     payload = msg.payload.decode('utf-8')
     print(f"<< Received message: {payload}")
 
     for _, device in devices.items():
-        
         check_topic = device.get_check_topic()
         response_topic = device.get_response_topic()
         control_topic = device.get_control_topic()
         result_topic = device.get_result_topic()
         
         publish_topic = None
-        result = None
+        result = {"result": "fail", "message": None}
         
         try:
             if msg.topic == check_topic:
@@ -39,16 +44,13 @@ def on_message(client, userdata, msg):
                 result = control(device, message)
         
         except json.JSONDecodeError as e:
-            error_message = f"Error parsing JSON: {e}"
-            result = {"result": "fail", "message": error_message}
+            result["message"] = f"Error parsing JSON: {e}"
         except Exception as e:
-            result = {"result": "fail", "message": str(e)}
+            result["message"] = str(e)
 
+        print(">> Response message: ", result)
         
         if publish_topic:
-            print(">> Response message: ", result)
             client.publish(publish_topic, json.dumps(result))
-            publish_topic = None
             return
-    
         

@@ -1,14 +1,11 @@
 import RPi.GPIO as GPIO
 from RpiMotorLib import RpiMotorLib
+from smbus2 import SMBus
 import time
 
 class Device:  # 부모 클래스 정의
-    def __init__(self, did, pin):
-        self.pin = pin
+    def __init__(self, did):
         self.did = did
-
-    def get_pin(self):
-        return self.pin
 
     def get_DID(self):
         return self.did
@@ -37,7 +34,8 @@ class Device:  # 부모 클래스 정의
 
 class LED(Device):
     def __init__(self, did, pin):
-        super().__init__(did, pin)
+        super().__init__(did)
+        self.pin = pin
         GPIO.setup(self.pin, GPIO.OUT)
         self.pwm = GPIO.PWM(self.pin, 1000)
         self.pwm.start(0)
@@ -77,7 +75,8 @@ class LED(Device):
 class CTN(Device):  # Device 클래스 상속
     
     def __init__(self, did, pin):
-        super().__init__(did, pin)  
+        super().__init__(did)  
+        self.pin = pin
         self.motor = RpiMotorLib.BYJMotor(did, "28BYJ")
     
     def set(self, degree):
@@ -98,6 +97,27 @@ class CTN(Device):  # Device 클래스 상속
         return Device.execute_operation(self.motor.motor_stop, 
                                         success_message="Motor stop successful.", 
                                         error_message_prefix="Error in stopping motor")
+        
+class SEN(Device):  # 조도 센서 클래스
+    def __init__(self, did, i2c_ch, bh1750_dev_addr, mode):
+        super().__init__(did)
+        self.i2c_ch = i2c_ch
+        self.bh1750_dev_addr = bh1750_dev_addr
+        self.mode = int(mode, 16)
+        self.bh1750_dev_addr = int(bh1750_dev_addr, 16)
+        self.i2c = SMBus(self.i2c_ch)
+
+    def read_light(self):
+        try:
+            luxBytes = self.i2c.read_i2c_block_data(self.bh1750_dev_addr, self.mode, 2)
+            lux = int.from_bytes(luxBytes, byteorder='big')
+            return lux
+        except Exception as e:
+            print("Error reading from sensor:", e)
+            return None
+
+    def cleanup(self):
+        self.i2c.close()
         
 def sys_setup():
     # GPIO 모드 설정
