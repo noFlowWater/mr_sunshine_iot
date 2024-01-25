@@ -14,28 +14,29 @@ if __name__ == '__main__':
         sys_setup()
         devices = {}
         
+        client = mqtt.Client()
+        
         # Initialize LED device
         for led_info in devices_config["LED"]:
-            devices[led_info["DID"]] = LED(led_info["DID"], 
-                                           led_info["PIN"])
+            devices[led_info["DID"]] = LED( led_info["DID"], 
+                                            led_info["PIN"] )
 
         # Initialize CTN device
         for ctn_info in devices_config["CTN"]:
-            devices[ctn_info["DID"]] = CTN(ctn_info["DID"], 
-                                           ctn_info["PIN"])
+            devices[ctn_info["DID"]] = CTN( ctn_info["DID"], 
+                                            ctn_info["PIN"] )
             
         # Initialize SEN device
         for sen_info in devices_config["SEN"]:
-            devices[sen_info["DID"]] = SEN(sen_info["DID"], 
-                                           sen_info["I2C_CH"], 
-                                           sen_info["BH1750_DEV_ADDR"], 
-                                           config["CONT_H_RES_MODE"])
+            devices[sen_info["DID"]] = SEN( client,
+                                            sen_info["DID"], 
+                                            sen_info["I2C_CH"], 
+                                            sen_info["BH1750_DEV_ADDR"], 
+                                            config["CONT_H_RES_MODE"] )
 
         # Delivering devices
         set_devices(devices)
 
-        client = mqtt.Client()
-        
         # MQTT Callback Function Settings
         client.on_connect = on_connect
         client.on_message = on_message

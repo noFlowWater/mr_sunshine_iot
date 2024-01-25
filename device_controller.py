@@ -1,7 +1,9 @@
 import RPi.GPIO as GPIO
 from RpiMotorLib import RpiMotorLib
 from smbus2 import SMBus
+import threading
 import time
+import json
 
 class Device:  # Defining a Parent Class
     def __init__(self, did):
@@ -98,14 +100,28 @@ class CTN(Device): # Device class inheritance
                                         success_message="Motor stop successful.", 
                                         error_message_prefix="Error in stopping motor")
         
-class SEN(Device):  # Light sensor class
-    def __init__(self, did, i2c_ch, bh1750_dev_addr, mode):
+class SEN(Device):
+    def __init__(self, client, did, i2c_ch, bh1750_dev_addr, mode, interval=1):
         super().__init__(did)
+        self.client = client
         self.i2c_ch = i2c_ch
-        self.bh1750_dev_addr = bh1750_dev_addr
-        self.mode = int(mode, 16)
         self.bh1750_dev_addr = int(bh1750_dev_addr, 16)
+        self.mode = int(mode, 16)
         self.i2c = SMBus(self.i2c_ch)
+        self.interval = interval
+        self.running = True
+        self.thread = threading.Thread(target=self._periodic_read)
+        self.thread.start()
+
+    def _periodic_read(self):
+        """주기적으로 read_light 함수를 호출합니다."""
+        while self.running:
+            lux = self.read_light()
+            if lux is not None:
+                print(f"{self.did}'s Sensor Value: {lux}")
+                result = { "sensor_value": lux }
+                self.client.publish(self.get_sensor_topic(), json.dumps(result))
+            time.sleep(self.interval)
 
     def read_light(self):
         try:
@@ -115,10 +131,16 @@ class SEN(Device):  # Light sensor class
         except Exception as e:
             print("Error reading from sensor:", e)
             return None
+        
+    def get_sensor_topic(self):
+        return f"sensor/{self.get_DID()}"
 
     def cleanup(self):
+        self.running = False
+        self.thread.join()
         self.i2c.close()
         
+
 def sys_setup():
     # Setting GPIO Mode
     GPIO.setmode(GPIO.BCM)
