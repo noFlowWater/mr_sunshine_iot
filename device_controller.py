@@ -1,5 +1,6 @@
 import RPi.GPIO as GPIO
 from RpiMotorLib import RpiMotorLib
+from utils import map_value
 from smbus2 import SMBus
 import threading
 import time
@@ -84,10 +85,15 @@ class CTN(Device): # Device class inheritance
     def set(self, degree):
         counterclockwise = degree < 0
         abs_degree = abs(degree)
-        steps = int(512 / 360 * abs_degree)
+        
+        # abs_degree를 0~1300 범위로 매핑
+        mapped_degree = map_value(abs_degree, 0, 100, 0, 1300)
+        
+        # 매핑된 값으로 steps 계산
+        steps = int(512 / 360 * mapped_degree)
 
         def operation():
-            self.motor.motor_run(self.pin, .001, steps, not counterclockwise, False, "half", .05)
+            self.motor.motor_run(self.pin, .001, steps, counterclockwise, False, "half", .05)
 
         success_message = f"Motor run successful. Degree: {degree}, Steps: {steps}, Counterclockwise: {str(not counterclockwise)}"
         error_message_prefix = "Error in running motor"
@@ -95,13 +101,14 @@ class CTN(Device): # Device class inheritance
                                         success_message=success_message, 
                                         error_message_prefix=error_message_prefix)
 
+
     def stop(self):
         return Device.execute_operation(self.motor.motor_stop, 
                                         success_message="Motor stop successful.", 
                                         error_message_prefix="Error in stopping motor")
         
 class SEN(Device):
-    def __init__(self, client, did, i2c_ch, bh1750_dev_addr, mode, interval=1):
+    def __init__(self, client, did, i2c_ch, bh1750_dev_addr, mode, interval = 10 ):
         super().__init__(did)
         self.client = client
         self.i2c_ch = i2c_ch
@@ -113,13 +120,14 @@ class SEN(Device):
         self.thread = threading.Thread(target=self._periodic_read)
         self.thread.start()
 
-    def _periodic_read(self):
-        """주기적으로 read_light 함수를 호출합니다."""
+    def _periodic_read(self): # Periodically call the read_light function
         while self.running:
             lux = self.read_light()
             if lux is not None:
-                print(f"{self.did}'s Sensor Value: {lux}")
-                result = { "sensor_value": lux }
+                # lux 값을 0~100으로 매핑
+                mapped_lux = map_value(lux, 0, 150, 0, 100)
+                result = { "sensor_value": int(mapped_lux) }  # 정수형으로 변환하여 저장
+                print(result)
                 self.client.publish(self.get_sensor_topic(), json.dumps(result))
             time.sleep(self.interval)
 
@@ -139,12 +147,37 @@ class SEN(Device):
         self.running = False
         self.thread.join()
         self.i2c.close()
-        
-
-def sys_setup():
+    
+def initialize_devices(client, config):
     # Setting GPIO Mode
     GPIO.setmode(GPIO.BCM)
     GPIO.setwarnings(False)
     
-def sys_end():
+    devices = {}
+    devices_config = config["DEVICES"]
+
+    # Initialize LED device
+    for led_info in devices_config.get("LED", []):
+        devices[led_info["DID"]] = LED(led_info["DID"], 
+                                       led_info["PIN"])
+
+    # Initialize CTN device
+    for ctn_info in devices_config.get("CTN", []):
+        devices[ctn_info["DID"]] = CTN(ctn_info["DID"], 
+                                       ctn_info["PIN"])
+
+    # Initialize SEN device
+    for sen_info in devices_config.get("SEN", []):
+        devices[sen_info["DID"]] = SEN(client, 
+                                       sen_info["DID"], 
+                                       sen_info["I2C_CH"], 
+                                       sen_info["BH1750_DEV_ADDR"], 
+                                       config["CONT_H_RES_MODE"])
+
+    return devices
+    
+def sys_end(devices):
+    for device in devices.values():
+        if isinstance(device, SEN):
+            device.cleanup()
     GPIO.cleanup()

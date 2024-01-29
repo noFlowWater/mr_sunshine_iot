@@ -2,13 +2,10 @@ from handle_topic import *
 import json
 import threading
 
-devices = None
-
-def set_devices(devs):
-    global devices
-    devices = devs
-
 def on_connect(client, userdata, flags, rc):
+    # Access devices from user_data
+    devices = userdata['devices']
+    
     # Subscribe to multiple topics
     for device_id, device in devices.items():  # Direct access to device objects
         client.subscribe(device.get_check_topic())
@@ -16,11 +13,16 @@ def on_connect(client, userdata, flags, rc):
         print("Subscribed to check & control topic for device:", device_id)
         
 def on_message(client, userdata, msg):
+    # Access devices from user_data
+    devices = userdata['devices']
+    print("msg.topic: ",msg.topic)
+    # print(devices)
+    
     # Starts a thread that calls function each time a message arrives
-    threading.Thread(target=process_mqtt_message, args=(client, msg)).start()
+    threading.Thread(target=process_mqtt_message, args=(client, msg, devices)).start()
     
         
-def process_mqtt_message(client, msg):
+def process_mqtt_message(client, msg, devices):
     payload = msg.payload.decode('utf-8')
     print(f"<< Received message: {payload}")
     
