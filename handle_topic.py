@@ -1,4 +1,4 @@
-from device_controller import *
+from device_controller import LED, CTN
 
 
 def check(device):
